@@ -1,4 +1,3 @@
-
 const imgs = { b365: null, bf: null };
 let players = [], activeFilter = 'all';
 
@@ -45,7 +44,7 @@ async function scan() {
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        players = data.players;
+        players = data.players.filter(p => p && p.name);
         const arbN = players.filter(p => calcArb(p)?.isArb).length;
         setStatus('ok', `${players.length} jogadores · ${arbN} arbitragem${arbN !== 1 ? 's' : ''} encontrada${arbN !== 1 ? 's' : ''}`);
         renderAll();
@@ -56,7 +55,7 @@ async function scan() {
 }
 
 function calcArb(p) {
-    if (!p.b365over || !p.b365under || !p.bfover || !p.bfunder) return null;
+    if (!p || !p.b365over || !p.b365under || !p.bfover || !p.bfunder) return null;
     const bo = Math.max(p.b365over, p.bfover);
     const bu = Math.max(p.b365under, p.bfunder);
     const m = 1 / bo + 1 / bu;
@@ -64,7 +63,9 @@ function calcArb(p) {
         bo, bu, m,
         oc: p.b365over >= p.bfover ? 'Bet365' : 'Betfair',
         uc: p.b365under >= p.bfunder ? 'Bet365' : 'Betfair',
-        isArb: m < 1, pct: ((1 - m) * 100).toFixed(2), mpct: (m * 100).toFixed(1)
+        isArb: m < 1,
+        pct: ((1 - m) * 100).toFixed(2),
+        mpct: (m * 100).toFixed(1)
     };
 }
 
@@ -77,7 +78,14 @@ function setFilter(f, btn) {
 
 function renderAll() {
     const arbs = players.filter(p => calcArb(p)?.isArb);
-    const best = arbs.length ? arbs.reduce((a, b) => calcArb(a).m < calcArb(b).m ? a : b) : null;
+    const best = arbs.length
+        ? arbs.reduce((a, b) => {
+            const ca = calcArb(a), cb = calcArb(b);
+            if (!ca) return b;
+            if (!cb) return a;
+            return ca.m < cb.m ? a : b;
+        })
+        : null;
     document.getElementById('resultsArea').innerHTML = `
     <div class="summary">
       <div class="sm"><div class="sm-lbl">Jogadores</div><div class="sm-val">${players.length}</div></div>
@@ -95,6 +103,7 @@ function renderAll() {
 
 function renderList() {
     const list = players.filter(p => {
+        if (!p) return false;
         if (activeFilter === 'arb') return calcArb(p)?.isArb;
         return true;
     });
@@ -104,8 +113,9 @@ function renderList() {
 }
 
 function card(p, i) {
+    if (!p) return '';
     const a = calcArb(p);
-    const ini = p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const ini = (p.name || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const noData = !p.bfover || !p.b365over;
     let body = noData
         ? `<div class="no-data">Betfair sem odds para este jogador — rola a página e manda novo print.</div>`
@@ -119,28 +129,28 @@ function card(p, i) {
           <div class="ob-row"><span class="ob-lbl">Under ${p.linha}</span><span class="ob-v ${(p.bfunder || 0) > p.b365under ? 'best' : ''}">${p.bfunder?.toFixed(2) ?? '—'}</span></div>
         </div>
       </div>
-      <div class="ms ${a.isArb ? 'y' : 'n'}">
-        <span>${a.isArb ? `✓ Arb ${a.pct}% — over ${a.oc} · under ${a.uc}` : `✗ Sem arb · margem ${a.mpct}%`}</span>
-        <span class="ms-v">${a.mpct}%</span>
+      <div class="ms ${a && a.isArb ? 'y' : 'n'}">
+        <span>${a && a.isArb ? `✓ Arb ${a.pct}% — over ${a.oc} · under ${a.uc}` : `✗ Sem arb · margem ${a ? a.mpct : '—'}%`}</span>
+        <span class="ms-v">${a ? a.mpct : '—'}%</span>
       </div>
-      ${a.isArb ? `<div class="sb">
+      ${a && a.isArb ? `<div class="sb">
         <div class="sb-t">Quanto apostar</div>
         <div class="sb-row"><label>Total R$</label>
           <input class="sb-inp" type="number" value="200" min="10" step="10" id="si${i}" oninput="updStake(${i},this.value)"/>
         </div>
         <div class="sr" id="sr${i}"></div>
-      </div>`: ''}`;
-    return `<div class="pc ${a?.isArb ? 'arb' : ''}" style="animation-delay:${i * 0.04}s">
+      </div>` : ''}`;
+    return `<div class="pc ${a && a.isArb ? 'arb' : ''}" style="animation-delay:${i * 0.04}s">
     <div class="pc-top">
       <div class="av">${ini}</div>
-      <div><div class="pc-name">${p.name}</div><div class="pc-meta">${p.team} · ${p.linha} ast</div></div>
-      ${a?.isArb ? '<span class="arb-badge">arb found</span>' : ''}
+      <div><div class="pc-name">${p.name || '?'}</div><div class="pc-meta">${p.team || ''} · ${p.linha || '?'} ast</div></div>
+      ${a && a.isArb ? '<span class="arb-badge">arb found</span>' : ''}
     </div>${body}</div>`;
 }
 
 function updStake(i, total) {
     const p = window._L?.[i]; if (!p) return;
-    const a = calcArb(p); if (!a?.isArb) return;
+    const a = calcArb(p); if (!a || !a.isArb) return;
     const t = parseFloat(total) || 200;
     const s1 = t * (1 / a.bo) / a.m, s2 = t - s1;
     const r1 = s1 * a.bo - t, r2 = s2 * a.bu - t;
