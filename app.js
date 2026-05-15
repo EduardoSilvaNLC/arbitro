@@ -86,6 +86,10 @@ function renderAll() {
             return ca.m < cb.m ? a : b;
         })
         : null;
+
+    const markets = ['all', 'points', 'assists', 'rebounds', 'threes'];
+    const marketLabels = { all: 'Todos', points: 'Pontos', assists: 'Assists', rebounds: 'Rebotes', threes: '3PM' };
+
     document.getElementById('resultsArea').innerHTML = `
     <div class="summary">
       <div class="sm"><div class="sm-lbl">Jogadores</div><div class="sm-val">${players.length}</div></div>
@@ -93,7 +97,7 @@ function renderAll() {
       <div class="sm"><div class="sm-lbl">Melhor</div><div class="sm-val" style="font-size:1.1rem;padding-top:6px;">${best ? best.name.split(' ').slice(-1)[0] : '—'}</div></div>
     </div>
     <div class="filters">
-      <button class="fb on" onclick="setFilter('all',this)">Todos</button>
+      ${markets.map(m => `<button class="fb ${m === 'all' ? 'on' : ''}" onclick="setFilter('${m}',this)">${marketLabels[m]}</button>`).join('')}
       <button class="fb" onclick="setFilter('arb',this)">Só arb</button>
     </div>
     <div id="plist"></div>
@@ -105,7 +109,8 @@ function renderList() {
     const list = players.filter(p => {
         if (!p) return false;
         if (activeFilter === 'arb') return calcArb(p)?.isArb;
-        return true;
+        if (activeFilter === 'all') return true;
+        return p.market === activeFilter;
     });
     window._L = list;
     document.getElementById('plist').innerHTML = list.map((p, i) => card(p, i)).join('');
@@ -117,6 +122,9 @@ function card(p, i) {
     const a = calcArb(p);
     const ini = (p.name || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const noData = !p.bfover || !p.b365over;
+    const marketLabel = { points: 'PTS', assists: 'AST', rebounds: 'REB', threes: '3PM' };
+    const mkt = marketLabel[p.market] || p.market || '?';
+
     let body = noData
         ? `<div class="no-data">Betfair sem odds para este jogador — rola a página e manda novo print.</div>`
         : `<div class="og">
@@ -140,10 +148,14 @@ function card(p, i) {
         </div>
         <div class="sr" id="sr${i}"></div>
       </div>` : ''}`;
+
     return `<div class="pc ${a && a.isArb ? 'arb' : ''}" style="animation-delay:${i * 0.04}s">
     <div class="pc-top">
       <div class="av">${ini}</div>
-      <div><div class="pc-name">${p.name || '?'}</div><div class="pc-meta">${p.team || ''} · ${p.linha || '?'} ast</div></div>
+      <div>
+        <div class="pc-name">${p.name || '?'}</div>
+        <div class="pc-meta">${p.team || ''} · ${p.linha || '?'} ${mkt}</div>
+      </div>
       ${a && a.isArb ? '<span class="arb-badge">arb found</span>' : ''}
     </div>${body}</div>`;
 }

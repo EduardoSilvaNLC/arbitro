@@ -12,23 +12,27 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'API key not configured on Vercel' });
 
-    const prompt = `You are analyzing two betting site screenshots for NBA player assists over/under markets.
+    const prompt = `You are analyzing two betting site screenshots for NBA player props markets.
 Image 1 = Bet365. Image 2 = Betfair Sportsbook.
 
-Extract the odds for each player's assists O/U market from both sites.
+Extract odds for ALL of these markets: Points, Assists, Rebounds, and 3-Pointers Made (3PM).
 
 IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
-If you see a number like 10, 14, 30 that is NOT an odd — it is likely a line value or other data. Ignore it.
+If you see a number like 10, 14, 30 that is NOT an odd — it is likely a line value. Ignore it as an odd.
 
-Return ONLY a valid JSON array:
-[{"name":"Player Name","team":"DET or CLE","linha":2.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
+Return ONLY a valid JSON array, no markdown, no explanation:
+[{"name":"Player Name","team":"DET or CLE","market":"points","linha":22.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
+
+Market values must be exactly one of: "points", "assists", "rebounds", "threes"
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00
-- if a player is missing from one site use null for that site's odds
-- linha is the assists line (e.g. 1.5, 2.5, 3.5, 6.5, 8.5)
-- only assists markets
-- no markdown, no explanation, just the JSON array`;
+- if a player is missing from one site use null for that site odds
+- linha is the over/under number shown
+- only include the 4 markets above
+- match players by name across both images
+- return every player and market you can find
+- no trailing commas, valid JSON only`;
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
