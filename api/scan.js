@@ -12,27 +12,22 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'API key not configured on Vercel' });
 
-    const prompt = `You are analyzing two betting site screenshots for NBA player props markets.
-Image 1 = Bet365. Image 2 = Betfair Sportsbook.
+    const prompt = `Analyze these two betting screenshots for NBA player props.
+Image 1 = Bet365. Image 2 = Betfair.
 
-Extract odds for ALL of these markets: Points, Assists, Rebounds, and 3-Pointers Made (3PM).
+Return ONLY a valid JSON array. No text before or after. No markdown.
 
-IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
-If you see a number like 10, 14, 30 that is NOT an odd — it is likely a line value. Ignore it as an odd.
+Format:
+[{"name":"Player Name","team":"DET","market":"points","linha":22.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
 
-Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Player Name","team":"DET or CLE","market":"points","linha":22.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
-
-Market values must be exactly one of: "points", "assists", "rebounds", "threes"
+Market must be one of: "points" "assists" "rebounds" "threes"
 
 Rules:
-- odds must be decimal numbers between 1.01 and 5.00
-- if a player is missing from one site use null for that site odds
-- linha is the over/under number shown
-- only include the 4 markets above
-- match players by name across both images
-- return every player and market you can find
-- no trailing commas, valid JSON only`;
+- Odds are decimals between 1.01 and 5.00 only
+- Use null for missing odds from one site
+- One entry per player per market
+- Only these 4 markets
+- Valid JSON only, no trailing commas`;
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -44,7 +39,7 @@ Rules:
             },
             body: JSON.stringify({
                 model: 'claude-sonnet-4-5',
-                max_tokens: 2000,
+                max_tokens: 4000,
                 messages: [{
                     role: 'user',
                     content: [
