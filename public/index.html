@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arb Scanner — NBA Assists</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #09090f;
+            --s1: #111118;
+            --s2: #17171f;
+            --s3: #1e1e28;
+            --border: rgba(255, 255, 255, 0.07);
+            --border2: rgba(255, 255, 255, 0.13);
+            --text: #ededf5;
+            --muted: #7878a0;
+            --hint: #4a4a68;
+            --purple: #7c6fff;
+            --purple2: #a89aff;
+            --green: #2dca8a;
+            --green-bg: rgba(45, 202, 138, 0.07);
+            --green-bd: rgba(45, 202, 138, 0.22);
+            --red: #ff5566;
+            --red-bg: rgba(255, 85, 102, 0.07);
+            --red-bd: rgba(255, 85, 102, 0.22);
+            --b365: #00c27a;
+            --bf: #f5a623;
+            --r: 12px;
+            --r-sm: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(rgba(124, 111, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(124, 111, 255, 0.025) 1px, transparent 1px);
+            background-size: 44px 44px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrap {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .logo em {
+            color: var(--purple);
+            font-style: normal;
+        }
+
+        .logo-sub {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .dz {
+            border: 1.5px dashed var(--border2);
+            border-radius: var(--r);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.15s;
+        }
+
+        .dz:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .dz.ready.b365z {
+            border-style: solid;
+            border-color: rgba(0, 194, 122, 0.4);
+            background: rgba(0, 194, 122, 0.04);
+        }
+
+        .dz.ready.bfz {
+            border-style: solid;
+            border-color: rgba(245, 166, 35, 0.4);
+            background: rgba(245, 166, 35, 0.04);
+        }
+
+        .dz input {
+            display: none;
+        }
+
+        .dz-pill {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 99px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .b365-pill {
+            background: rgba(0, 194, 122, 0.15);
+            color: var(--b365);
+            border: 1px solid rgba(0, 194, 122, 0.3);
+        }
+
+        .bf-pill {
+            background: rgba(245, 166, 35, 0.12);
+            color: var(--bf);
+            border: 1px solid rgba(245, 166, 35, 0.3);
+        }
+
+        .dz-lbl {
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .dz-sub {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--hint);
+        }
+
+        .dz-prev {
+            width: 100%;
+            max-height: 75px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-top: 4px;
+            opacity: 0.75;
+        }
+
+        .scan-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--purple);
+            color: white;
+            border: none;
+            border-radius: var(--r);
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .scan-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .scan-btn:hover:not(:disabled) {
+            opacity: 0.88;
+        }
+
+        .status {
+            border-radius: var(--r-sm);
+            padding: 10px 16px;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.78rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status.loading {
+            background: rgba(124, 111, 255, 0.1);
+            border: 1px solid rgba(124, 111, 255, 0.2);
+            color: var(--purple2);
+        }
+
+        .status.error {
+            background: var(--red-bg);
+            border: 1px solid var(--red-bd);
+            color: var(--red);
+        }
+
+        .status.ok {
+            background: var(--green-bg);
+            border: 1px solid var(--green-bd);
+            color: var(--green);
+        }
+
+        .spin {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(124, 111, 255, 0.3);
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: sp 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes sp {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .sm {
+            background: var(--s1);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 1rem 1.25rem;
+        }
+
+        .sm-lbl {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .sm-val {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .sm-val.g {
+            color: var(--green);
+        }
+
+        .filters {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .fb {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            padding: 5px 12px;
+            border-radius: 99px;
+            border: 1px solid var(--border2);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.15s;
+        }
+
+        .fb:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text);
+        }
+
+        .fb.on {
+            background: var(--s2);
+            border-color: var(--purple);
+            color: var(--purple2);
+        }
+
+        .pc {
+            background: var(--s1);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 1.25rem;
+            margin-bottom: 10px;
+            animation: fu 0.3s ease both;
+        }
+
+        .pc.arb {
+            border-color: var(--green-bd);
+            background: linear-gradient(135deg, var(--s1), rgba(45, 202, 138, 0.03));
+        }
+
+        @keyframes fu {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pc-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .av {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--s3);
+            border: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .pc-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .pc-meta {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--muted);
+            margin-top: 2px;
+            letter-spacing: 0.04em;
+        }
+
+        .arb-badge {
+            margin-left: auto;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 99px;
+            background: var(--green-bg);
+            color: var(--green);
+            border: 1px solid var(--green-bd);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .og {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ob {
+            background: var(--s2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 10px 12px;
+        }
+
+        .ob-src {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .ob-src.b {
+            color: var(--b365);
+        }
+
+        .ob-src.f {
+            color: var(--bf);
+        }
+
+        .ob-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+        }
+
+        .ob-lbl {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .ob-v {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .ob-v.best {
+            color: var(--green);
+        }
+
+        .ms {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: var(--r-sm);
+            margin-bottom: 8px;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.73rem;
+        }
+
+        .ms.y {
+            background: var(--green-bg);
+            border: 1px solid var(--green-bd);
+            color: var(--green);
+        }
+
+        .ms.n {
+            background: var(--s2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .ms-v {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .sb {
+            background: rgba(45, 202, 138, 0.05);
+            border: 1px solid var(--green-bd);
+            border-radius: var(--r-sm);
+            padding: 12px 14px;
+        }
+
+        .sb-t {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--green);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .sb-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sb-row label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--green);
+            white-space: nowrap;
+        }
+
+        .sb-inp {
+            width: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--green-bd);
+            border-radius: 6px;
+            padding: 7px 10px;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .sb-inp:focus {
+            border-color: var(--green);
+        }
+
+        .sr {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .sri {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 6px;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        .sri-l {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.58rem;
+            color: rgba(45, 202, 138, 0.6);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .sri-v {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--green);
+        }
+
+        .no-data {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            padding: 4px 0;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 11px;
+            background: transparent;
+            border: 1px solid var(--border2);
+            border-radius: var(--r);
+            color: var(--muted);
+            font-family: 'Syne', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .reset-btn:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--text);
+        }
+
+        @media(max-width:560px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .og {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div class="logo">arb<em>.</em>scanner</div>
+            <div class="logo-sub">NBA assists arbitrage · Bet365 × Betfair</div>
+        </header>
+        <div class="upload-section">
+            <div class="dz b365z" id="dz-b365" onclick="document.getElementById('i-b365').click()">
+                <input type="file" id="i-b365" accept="image/*" onchange="loadImg('b365',this)">
+                <div style="font-size:1.8rem;opacity:0.2;line-height:1;">↑</div>
+                <span class="dz-pill b365-pill">Bet365</span>
+                <span class="dz-lbl" id="l-b365">Print de assistências</span>
+                <span class="dz-sub">Assists O/U</span>
+            </div>
+            <div class="dz bfz" id="dz-bf" onclick="document.getElementById('i-bf').click()">
+                <input type="file" id="i-bf" accept="image/*" onchange="loadImg('bf',this)">
+                <div style="font-size:1.8rem;opacity:0.2;line-height:1;">↑</div>
+                <span class="dz-pill bf-pill">Betfair</span>
+                <span class="dz-lbl" id="l-bf">Print de assistências</span>
+                <span class="dz-sub">Individual Assists</span>
+            </div>
+        </div>
+        <button class="scan-btn" id="scanBtn" onclick="scan()" disabled>Analisar e encontrar arbitragens</button>
+        <div id="statusArea"></div>
+        <div id="resultsArea"></div>
+    </div>
+    <script>
+        const imgs = { b365: null, bf: null };
+        let players = [], activeFilter = 'all';
+
+        function loadImg(casa, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                imgs[casa] = { data: e.target.result, mime: file.type || 'image/png' };
+                const dz = document.getElementById('dz-' + casa);
+                dz.classList.add('ready');
+                document.getElementById('l-' + casa).textContent = file.name.length > 22 ? file.name.slice(0, 20) + '...' : file.name;
+                const old = dz.querySelector('.dz-prev'); if (old) old.remove();
+                const img = document.createElement('img'); img.className = 'dz-prev'; img.src = e.target.result;
+                dz.appendChild(img);
+                checkReady();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function checkReady() {
+            document.getElementById('scanBtn').disabled = !(imgs.b365 && imgs.bf);
+        }
+
+        function b64(d) { return d.split(',')[1]; }
+
+        function setStatus(type, msg) {
+            const icon = type === 'loading' ? '<div class="spin"></div>' : `<span>${type === 'ok' ? '✓' : '✕'}</span>`;
+            document.getElementById('statusArea').innerHTML = `<div class="status ${type}">${icon}<span>${msg}</span></div>`;
+        }
+
+        async function scan() {
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('resultsArea').innerHTML = '';
+            setStatus('loading', 'IA analisando os prints — aguarde...');
+            try {
+                const res = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        b365Image: b64(imgs.b365.data), b365Mime: imgs.b365.mime,
+                        bfImage: b64(imgs.bf.data), bfMime: imgs.bf.mime
+                    })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                players = data.players;
+                const arbN = players.filter(p => calcArb(p)?.isArb).length;
+                setStatus('ok', `${players.length} jogadores · ${arbN} arbitragem${arbN !== 1 ? 's' : ''} encontrada${arbN !== 1 ? 's' : ''}`);
+                renderAll();
+            } catch (e) {
+                setStatus('error', 'Erro: ' + e.message);
+                document.getElementById('scanBtn').disabled = false;
+            }
+        }
+
+        function calcArb(p) {
+            if (!p.b365over || !p.b365under || !p.bfover || !p.bfunder) return null;
+            const bo = Math.max(p.b365over, p.bfover);
+            const bu = Math.max(p.b365under, p.bfunder);
+            const m = 1 / bo + 1 / bu;
+            return {
+                bo, bu, m,
+                oc: p.b365over >= p.bfover ? 'Bet365' : 'Betfair',
+                uc: p.b365under >= p.bfunder ? 'Bet365' : 'Betfair',
+                isArb: m < 1, pct: ((1 - m) * 100).toFixed(2), mpct: (m * 100).toFixed(1)
+            };
+        }
+
+        function setFilter(f, btn) {
+            activeFilter = f;
+            document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
+            btn.classList.add('on');
+            renderList();
+        }
+
+        function renderAll() {
+            const arbs = players.filter(p => calcArb(p)?.isArb);
+            const best = arbs.length ? arbs.reduce((a, b) => calcArb(a).m < calcArb(b).m ? a : b) : null;
+            document.getElementById('resultsArea').innerHTML = `
+    <div class="summary">
+      <div class="sm"><div class="sm-lbl">Jogadores</div><div class="sm-val">${players.length}</div></div>
+      <div class="sm"><div class="sm-lbl">Arbitragens</div><div class="sm-val g">${arbs.length}</div></div>
+      <div class="sm"><div class="sm-lbl">Melhor</div><div class="sm-val" style="font-size:1.1rem;padding-top:6px;">${best ? best.name.split(' ').slice(-1)[0] : '—'}</div></div>
+    </div>
+    <div class="filters">
+      <button class="fb on" onclick="setFilter('all',this)">Todos</button>
+      <button class="fb" onclick="setFilter('arb',this)">Só arb</button>
+    </div>
+    <div id="plist"></div>
+    <button class="reset-btn" onclick="resetAll()">↺ Novo scan</button>`;
+            renderList();
+        }
+
+        function renderList() {
+            const list = players.filter(p => {
+                if (activeFilter === 'arb') return calcArb(p)?.isArb;
+                return true;
+            });
+            window._L = list;
+            document.getElementById('plist').innerHTML = list.map((p, i) => card(p, i)).join('');
+            list.forEach((p, i) => { if (calcArb(p)?.isArb) updStake(i, 200); });
+        }
+
+        function card(p, i) {
+            const a = calcArb(p);
+            const ini = p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const noData = !p.bfover || !p.b365over;
+            let body = noData
+                ? `<div class="no-data">Betfair sem odds para este jogador — rola a página e manda novo print.</div>`
+                : `<div class="og">
+        <div class="ob"><div class="ob-src b">Bet365</div>
+          <div class="ob-row"><span class="ob-lbl">Over ${p.linha}</span><span class="ob-v ${p.b365over >= (p.bfover || 0) ? 'best' : ''}">${p.b365over?.toFixed(2)}</span></div>
+          <div class="ob-row"><span class="ob-lbl">Under ${p.linha}</span><span class="ob-v ${p.b365under >= (p.bfunder || 0) ? 'best' : ''}">${p.b365under?.toFixed(2)}</span></div>
+        </div>
+        <div class="ob"><div class="ob-src f">Betfair</div>
+          <div class="ob-row"><span class="ob-lbl">Over ${p.linha}</span><span class="ob-v ${(p.bfover || 0) > p.b365over ? 'best' : ''}">${p.bfover?.toFixed(2) ?? '—'}</span></div>
+          <div class="ob-row"><span class="ob-lbl">Under ${p.linha}</span><span class="ob-v ${(p.bfunder || 0) > p.b365under ? 'best' : ''}">${p.bfunder?.toFixed(2) ?? '—'}</span></div>
+        </div>
+      </div>
+      <div class="ms ${a.isArb ? 'y' : 'n'}">
+        <span>${a.isArb ? `✓ Arb ${a.pct}% — over ${a.oc} · under ${a.uc}` : `✗ Sem arb · margem ${a.mpct}%`}</span>
+        <span class="ms-v">${a.mpct}%</span>
+      </div>
+      ${a.isArb ? `<div class="sb">
+        <div class="sb-t">Quanto apostar</div>
+        <div class="sb-row"><label>Total R$</label>
+          <input class="sb-inp" type="number" value="200" min="10" step="10" id="si${i}" oninput="updStake(${i},this.value)"/>
+        </div>
+        <div class="sr" id="sr${i}"></div>
+      </div>`: ''}`;
+            return `<div class="pc ${a?.isArb ? 'arb' : ''}" style="animation-delay:${i * 0.04}s">
+    <div class="pc-top">
+      <div class="av">${ini}</div>
+      <div><div class="pc-name">${p.name}</div><div class="pc-meta">${p.team} · ${p.linha} ast</div></div>
+      ${a?.isArb ? '<span class="arb-badge">arb found</span>' : ''}
+    </div>${body}</div>`;
+        }
+
+        function updStake(i, total) {
+            const p = window._L?.[i]; if (!p) return;
+            const a = calcArb(p); if (!a?.isArb) return;
+            const t = parseFloat(total) || 200;
+            const s1 = t * (1 / a.bo) / a.m, s2 = t - s1;
+            const r1 = s1 * a.bo - t, r2 = s2 * a.bu - t;
+            const el = document.getElementById('sr' + i); if (!el) return;
+            el.innerHTML = `
+    <div class="sri"><div class="sri-l">${a.oc} over</div><div class="sri-v">R$ ${s1.toFixed(2)}</div></div>
+    <div class="sri"><div class="sri-l">${a.uc} under</div><div class="sri-v">R$ ${s2.toFixed(2)}</div></div>
+    <div class="sri"><div class="sri-l">Lucro mín.</div><div class="sri-v">R$ ${Math.min(r1, r2).toFixed(2)}</div></div>`;
+        }
+
+        function resetAll() {
+            imgs.b365 = null; imgs.bf = null; players = [];
+            ['b365', 'bf'].forEach(c => {
+                const dz = document.getElementById('dz-' + c);
+                dz.classList.remove('ready');
+                const prev = dz.querySelector('.dz-prev'); if (prev) prev.remove();
+                document.getElementById('l-' + c).textContent = 'Print de assistências';
+                document.getElementById('i-' + c).value = '';
+            });
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('statusArea').innerHTML = '';
+            document.getElementById('resultsArea').innerHTML = '';
+        }
+    </script>
+</body>
+
+</html>
