@@ -20,20 +20,16 @@ Extract odds for pitcher strikeouts over/under markets for each pitcher.
 IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00.
 Numbers like 5.5, 6.5, 0.5, 3.5, 4.5 are the LINE (strikeouts), NOT odds.
 
-CRITICAL RULE: Only include a pitcher if BOTH sites have the EXACT SAME line.
-If Bet365 has a pitcher at 3.5 and Betfair has the same pitcher at 4.5 — skip that pitcher entirely.
-Only include pitchers where the linha is identical on both sites.
-
 Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Pitcher Name","team":"Team Abbreviation","linha":5.5,"b365over":1.83,"b365under":1.90,"bfover":1.91,"bfunder":1.73}]
+[{"name":"Pitcher Name","team":"Team","b365linha":5.5,"bflinha":5.5,"b365over":1.83,"b365under":1.90,"bfover":1.91,"bfunder":1.73}]
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00 only
-- only include pitchers where linha is IDENTICAL on both sites
-- if lines differ, skip that pitcher entirely
+- b365linha = the exact line number shown on Bet365 for that pitcher
+- bflinha = the exact line number shown on Betfair for that pitcher
+- include ALL pitchers found on either site
+- if pitcher only appears on one site, use null for missing odds and null for missing linha
 - only pitcher strikeouts markets
-- match pitchers by name across both images
-- return every eligible pitcher you can find
 - valid JSON only, no trailing commas`;
 
     try {
@@ -74,7 +70,23 @@ Rules:
             return res.status(500).json({ error: 'JSON inválido: ' + parseErr.message });
         }
 
+        // filtra nome válido
         players = players.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+
+        // remove jogadores com linhas diferentes entre as casas
+        players = players.filter(p => {
+            if (p.b365linha && p.bflinha) {
+                return parseFloat(p.b365linha) === parseFloat(p.bflinha);
+            }
+            return true;
+        });
+
+        // normaliza: define linha única como a que existe
+        players = players.map(p => ({
+            ...p,
+            linha: p.b365linha || p.bflinha
+        }));
+
         return res.status(200).json({ players });
     } catch (e) {
         return res.status(500).json({ error: e.message });
