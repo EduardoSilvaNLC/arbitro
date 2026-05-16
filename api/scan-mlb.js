@@ -30,7 +30,9 @@ Rules:
 - include ALL pitchers found on either site
 - if pitcher only appears on one site, use null for missing odds and null for missing linha
 - only pitcher strikeouts markets
+- When reading the line from Betfair, ignore the + sign. "+3.5" means the line is 3.5, "+4.5" means 4.5
 - valid JSON only, no trailing commas`;
+
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -73,18 +75,19 @@ Rules:
         // filtra nome válido
         players = players.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
 
-        // remove jogadores com linhas diferentes entre as casas
         players = players.filter(p => {
+            if (!p || typeof p.name !== 'string' || p.name.trim().length === 0) return false;
             if (p.b365linha && p.bflinha) {
-                return parseFloat(p.b365linha) === parseFloat(p.bflinha);
+                const l1 = parseFloat(String(p.b365linha).replace('+', ''));
+                const l2 = parseFloat(String(p.bflinha).replace('+', ''));
+                return l1 === l2;
             }
             return true;
         });
 
-        // normaliza: define linha única como a que existe
         players = players.map(p => ({
             ...p,
-            linha: p.b365linha || p.bflinha
+            linha: parseFloat(String(p.b365linha || p.bflinha).replace('+', ''))
         }));
 
         return res.status(200).json({ players });
