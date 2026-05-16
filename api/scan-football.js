@@ -12,26 +12,28 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'API key not configured on Vercel' });
 
-    const prompt = `You are analyzing two betting site screenshots for MLB baseball pitcher props markets.
-Image 1 = Bet365 (Pitcher Props tab). Image 2 = Betfair Sportsbook (Pitcher Total Strikeouts section).
+    const prompt = `You are analyzing two betting site screenshots for football (soccer) player props markets.
+Image 1 = Bet365. Image 2 = Betfair Sportsbook.
 
-Extract odds for pitcher strikeouts over/under markets for each pitcher.
+Extract odds for shots on target over/under markets for each player.
 
-IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00.
-Numbers like 5.5, 6.5, 0.5, 3.5, 4.5 are the LINE (strikeouts), NOT odds.
+IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
+If you see a number like 10, 14, 30 that is NOT an odd — it is a line value. Ignore it as an odd.
 
-CRITICAL RULE: Only include a pitcher if BOTH sites have the EXACT SAME line.
-Example: if Bet365 has Noah Cameron at 3.5 and Betfair has Noah Cameron at 4.5 — DO NOT include Noah Cameron.
-Only include pitchers where the linha is identical on both sites.
+CRITICAL RULE: Only include a player if BOTH sites have the EXACT SAME line.
+If Bet365 has a player at 1.5 and Betfair has the same player at 2.5 — skip that player entirely.
+Only include players where the linha is identical on both sites.
 
 Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Pitcher Name","team":"Team Abbreviation","linha":5.5,"b365over":1.83,"b365under":1.90,"bfover":1.91,"bfunder":1.73}]
+[{"name":"Player Name","team":"Team Name","league":"Premier League","linha":1.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00 only
-- only include pitchers where linha is IDENTICAL on both sites
-- if lines differ, skip that pitcher entirely
-- only pitcher strikeouts markets
+- only include players where linha is IDENTICAL on both sites
+- if lines differ, skip that player entirely
+- only shots on target markets
+- match players by name across both images
+- return every eligible player you can find
 - valid JSON only, no trailing commas`;
 
     try {

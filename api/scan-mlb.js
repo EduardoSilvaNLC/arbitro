@@ -21,7 +21,7 @@ IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00.
 Numbers like 5.5, 6.5, 0.5, 3.5, 4.5 are the LINE (strikeouts), NOT odds.
 
 CRITICAL RULE: Only include a pitcher if BOTH sites have the EXACT SAME line.
-Example: if Bet365 has Noah Cameron at 3.5 and Betfair has Noah Cameron at 4.5 — DO NOT include Noah Cameron.
+If Bet365 has a pitcher at 3.5 and Betfair has the same pitcher at 4.5 — skip that pitcher entirely.
 Only include pitchers where the linha is identical on both sites.
 
 Return ONLY a valid JSON array, no markdown, no explanation:
@@ -32,6 +32,8 @@ Rules:
 - only include pitchers where linha is IDENTICAL on both sites
 - if lines differ, skip that pitcher entirely
 - only pitcher strikeouts markets
+- match pitchers by name across both images
+- return every eligible pitcher you can find
 - valid JSON only, no trailing commas`;
 
     try {
