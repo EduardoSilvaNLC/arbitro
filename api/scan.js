@@ -19,21 +19,19 @@ Extract odds for assists over/under markets for each player.
 
 IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
 If you see a number like 10, 14, 30 that is NOT an odd — it is a line value. Ignore it as an odd.
-
-CRITICAL RULE: Only include a player if BOTH sites have the EXACT SAME line.
-If Bet365 has a player at 7.5 and Betfair has the same player at 8.5 — skip that player entirely.
-Only include players where the linha is identical on both sites.
+When reading the line from Betfair, ignore the + sign. "+7.5" means the line is 7.5.
 
 Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Player Name","team":"DET or CLE","linha":7.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
+[{"name":"Player Name","team":"DET or CLE","b365linha":7.5,"bflinha":7.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00 only
-- only include players where linha is IDENTICAL on both sites
-- if lines differ, skip that player entirely
+- b365linha = the exact line number shown on Bet365 for that player
+- bflinha = the exact line number shown on Betfair for that player (ignore + sign)
+- include ALL players found on either site
+- if player only appears on one site, use null for missing odds and null for missing linha
 - only assists markets, not rebounds or points
 - match players by name across both images
-- return every eligible player you can find
 - valid JSON only, no trailing commas`;
 
     try {
@@ -62,11 +60,8 @@ Rules:
         if (data.error) return res.status(500).json({ error: data.error.message });
 
         let raw = data.content.map(c => c.text || '').join('').trim();
-
-        // remove markdown se vier
         raw = raw.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        // extrai só o array JSON mesmo que venha texto ao redor
         const match = raw.match(/\[[\s\S]*\]/);
         if (!match) return res.status(500).json({ error: 'IA não retornou JSON válido. Tente novamente.' });
 
@@ -74,11 +69,27 @@ Rules:
         try {
             players = JSON.parse(match[0]);
         } catch (parseErr) {
-            return res.status(500).json({ error: 'JSON inválido retornado pela IA: ' + parseErr.message });
+            return res.status(500).json({ error: 'JSON inválido: ' + parseErr.message });
         }
 
-        // filtra jogadores com nome válido
+        // filtra nome válido
         players = players.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+
+        // remove jogadores com linhas diferentes entre casas
+        players = players.filter(p => {
+            if (p.b365linha && p.bflinha) {
+                const l1 = parseFloat(String(p.b365linha).replace('+', ''));
+                const l2 = parseFloat(String(p.bflinha).replace('+', ''));
+                return l1 === l2;
+            }
+            return true;
+        });
+
+        // normaliza linha única
+        players = players.map(p => ({
+            ...p,
+            linha: parseFloat(String(p.b365linha || p.bflinha).replace('+', ''))
+        }));
 
         return res.status(200).json({ players });
     } catch (e) {

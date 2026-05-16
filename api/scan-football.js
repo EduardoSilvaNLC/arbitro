@@ -19,21 +19,19 @@ Extract odds for shots on target over/under markets for each player.
 
 IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
 If you see a number like 10, 14, 30 that is NOT an odd — it is a line value. Ignore it as an odd.
-
-CRITICAL RULE: Only include a player if BOTH sites have the EXACT SAME line.
-If Bet365 has a player at 1.5 and Betfair has the same player at 2.5 — skip that player entirely.
-Only include players where the linha is identical on both sites.
+When reading the line from Betfair, ignore the + sign. "+1.5" means the line is 1.5.
 
 Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Player Name","team":"Team Name","league":"Premier League","linha":1.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
+[{"name":"Player Name","team":"Team Name","league":"Premier League","b365linha":1.5,"bflinha":1.5,"b365over":1.90,"b365under":1.85,"bfover":2.10,"bfunder":1.75}]
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00 only
-- only include players where linha is IDENTICAL on both sites
-- if lines differ, skip that player entirely
+- b365linha = the exact line number shown on Bet365 for that player
+- bflinha = the exact line number shown on Betfair for that player (ignore + sign)
+- include ALL players found on either site
+- if player only appears on one site, use null for missing odds and null for missing linha
 - only shots on target markets
 - match players by name across both images
-- return every eligible player you can find
 - valid JSON only, no trailing commas`;
 
     try {
@@ -74,7 +72,25 @@ Rules:
             return res.status(500).json({ error: 'JSON inválido: ' + parseErr.message });
         }
 
+        // filtra nome válido
         players = players.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+
+        // remove jogadores com linhas diferentes entre casas
+        players = players.filter(p => {
+            if (p.b365linha && p.bflinha) {
+                const l1 = parseFloat(String(p.b365linha).replace('+', ''));
+                const l2 = parseFloat(String(p.bflinha).replace('+', ''));
+                return l1 === l2;
+            }
+            return true;
+        });
+
+        // normaliza linha única
+        players = players.map(p => ({
+            ...p,
+            linha: parseFloat(String(p.b365linha || p.bflinha).replace('+', ''))
+        }));
+
         return res.status(200).json({ players });
     } catch (e) {
         return res.status(500).json({ error: e.message });
