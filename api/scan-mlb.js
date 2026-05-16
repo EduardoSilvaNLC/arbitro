@@ -12,27 +12,34 @@ export default async function handler(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'API key not configured on Vercel' });
 
-    const prompt = `You are analyzing two betting site screenshots for MLB baseball pitcher props markets.
-Image 1 = Bet365 (Pitcher Props tab). Image 2 = Betfair Sportsbook (Pitcher Total Strikeouts section).
+    const prompt = `You are analyzing two betting site screenshots for MLB baseball pitcher strikeouts markets.
+Image 1 = Bet365. Image 2 = Betfair.
 
-Extract odds for pitcher strikeouts over/under markets for each pitcher.
+Your job: for each pitcher, read the strikeout LINE and ODDS from each site separately.
 
-IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00.
-Numbers like 5.5, 6.5, 0.5, 3.5, 4.5 are the LINE (strikeouts), NOT odds.
+HOW TO READ BET365 (Image 1):
+- The line appears before the odds. Example: "4.5  1.62  2.20" means line=4.5, over=1.62, under=2.20
+- Format is always: LINE  OVER_ODD  UNDER_ODD
 
-Return ONLY a valid JSON array, no markdown, no explanation:
-[{"name":"Pitcher Name","team":"Team","b365linha":5.5,"bflinha":5.5,"b365over":1.83,"b365under":1.90,"bfover":1.91,"bfunder":1.73}]
+HOW TO READ BETFAIR (Image 2):
+- The line appears with a + sign inside the button. Example: "OVER +5.5  2.2" means line=5.5, over=2.2
+- Always remove the + sign to get the line number
+- "+4.5" = line 4.5, "+5.5" = line 5.5, "+2.5" = line 2.5
+
+CRITICAL: Read each site independently. Do NOT assume the lines are the same.
+Example: Bet365 may show Eduardo Rodriguez at 4.5 while Betfair shows him at +5.5 — these are DIFFERENT lines.
+
+Return ONLY a valid JSON array:
+[{"name":"Pitcher Name","team":"Team","b365linha":4.5,"bflinha":5.5,"b365over":1.62,"b365under":2.20,"bfover":2.20,"bfunder":1.57}]
 
 Rules:
-- odds must be decimal numbers between 1.01 and 5.00 only
-- b365linha = the exact line number shown on Bet365 for that pitcher
-- bflinha = the exact line number shown on Betfair for that pitcher
-- include ALL pitchers found on either site
-- if pitcher only appears on one site, use null for missing odds and null for missing linha
-- only pitcher strikeouts markets
-- When reading the line from Betfair, ignore the + sign. "+3.5" means the line is 3.5, "+4.5" means 4.5
+- odds are decimals between 1.01 and 5.00 only
+- b365linha = line from Bet365 only
+- bflinha = line from Betfair only (remove + sign)
+- include ALL pitchers from both sites
+- if pitcher missing from one site: use null for that site's odds and linha
+- only strikeouts markets
 - valid JSON only, no trailing commas`;
-
 
     try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -75,9 +82,9 @@ Rules:
         // filtra nome válido
         players = players.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
 
+        // remove pitchers com linhas diferentes — verificação no código
         players = players.filter(p => {
-            if (!p || typeof p.name !== 'string' || p.name.trim().length === 0) return false;
-            if (p.b365linha && p.bflinha) {
+            if (p.b365linha != null && p.bflinha != null) {
                 const l1 = parseFloat(String(p.b365linha).replace('+', ''));
                 const l2 = parseFloat(String(p.bflinha).replace('+', ''));
                 return l1 === l2;
@@ -85,6 +92,7 @@ Rules:
             return true;
         });
 
+        // normaliza linha única
         players = players.map(p => ({
             ...p,
             linha: parseFloat(String(p.b365linha || p.bflinha).replace('+', ''))
