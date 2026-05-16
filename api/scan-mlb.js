@@ -17,19 +17,21 @@ Image 1 = Bet365 (Pitcher Props tab). Image 2 = Betfair Sportsbook (Pitcher Tota
 
 Extract odds for pitcher strikeouts over/under markets for each pitcher.
 
-IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00. Examples: 1.57, 1.83, 2.25, 1.90, 2.10.
-Numbers like 5.5, 6.5, 0.5 are the LINE (how many strikeouts), NOT odds. Do not confuse them.
+IMPORTANT: All odds are in DECIMAL format between 1.01 and 5.00.
+Numbers like 5.5, 6.5, 0.5, 3.5, 4.5 are the LINE (strikeouts), NOT odds.
+
+CRITICAL RULE: Only include a pitcher if BOTH sites have the EXACT SAME line.
+Example: if Bet365 has Noah Cameron at 3.5 and Betfair has Noah Cameron at 4.5 — DO NOT include Noah Cameron.
+Only include pitchers where the linha is identical on both sites.
 
 Return ONLY a valid JSON array, no markdown, no explanation:
 [{"name":"Pitcher Name","team":"Team Abbreviation","linha":5.5,"b365over":1.83,"b365under":1.90,"bfover":1.91,"bfunder":1.73}]
 
 Rules:
 - odds must be decimal numbers between 1.01 and 5.00 only
-- linha is the strikeouts line (e.g. 0.5, 4.5, 5.5, 6.5, 7.5)
-- if a pitcher appears in only one site use null for missing odds
+- only include pitchers where linha is IDENTICAL on both sites
+- if lines differ, skip that pitcher entirely
 - only pitcher strikeouts markets
-- match pitchers by name across both images
-- return every pitcher you can find
 - valid JSON only, no trailing commas`;
 
     try {
